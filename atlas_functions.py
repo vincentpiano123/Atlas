@@ -3,6 +3,7 @@ import os
 import functools
 import time
 import matplotlib.pyplot as plt
+from numba import njit
 from tqdm import tqdm
 from allensdk.core.reference_space import ReferenceSpace
 from allensdk.core.reference_space_cache import ReferenceSpaceCache
@@ -55,20 +56,20 @@ def map_generator(rsp, tree, show = 'no', structure = 'all'):
         id_compare = tree.get_structures_by_name([structure])[0].get('id')
         remove_id = []
         keep_id = []
-        for id in id_list:
-            if not tree.structure_descends_from(id, id_compare):
-                remove_id.append(id)
+        for i in id_list:
+            if not tree.structure_descends_from(i, id_compare):
+                remove_id.append(i)
             else:
-                keep_id.append(id)
+                keep_id.append(i)
 
-        for id in remove_id:
-            id_map = np.where(id_map==id, 0, id_map)
+        for i in remove_id:
+            id_map = np.where(id_map==i, 0, id_map)
 
         
     name_map = tree.get_name_map()
     id_name_dict = {}
-    for id in keep_id:
-        id_name_dict[id] = name_map[id]
+    for i in keep_id:
+        id_name_dict[i] = name_map[i]
 
 
     if show == 'yes':    
@@ -81,24 +82,41 @@ def map_generator(rsp, tree, show = 'no', structure = 'all'):
     return id_map, id_name_dict, hardcoded_bregma
 
 
-def create_mask(id_map, id):
-    return np.where(id_map==id, 1, 0)
+def create_mask(id_map, i):
+    if type(i) == list:
+        mask = np.zeros(id_map.shape)
+        for j in i:
+            mask += np.where(id_map==j, 1, 0)
+        return mask
+    return np.where(id_map==i, 1, 0)
 
 
 def create_contour(structure): #Contours in horizontal (h) and vertical (v) planes. contours are sum of both, and returns boolean (normalized to 1).
     contours_h = abs(np.diff(structure))
     contours_v = abs(np.diff(structure, axis=0))
     contour_h = np.concatenate((contours_h, np.zeros((len(contours_h),1))),axis=1)
-    print(contour_h.shape)
     contour_v = np.concatenate((contours_v, np.zeros((1,len(contours_v[0])))))
     contours = contour_h + contour_v
     return np.where(contours!=0, 1, 0)
+
+                        
+                        
 
 
 #rsp, tree = open_AllenSDK()
 #isocortex_map, id_name_dict, bregma = map_generator(rsp, tree, structure='Isocortex')
 #fig, ax = plt.subplots(figsize=(10, 10))
-#plt.imshow(isocortex_map,vmax=1300)
-#plt.show()
 #sma_mask = create_mask(isocortex_map, 656)
-#create_contour(sma_mask)
+#contour = create_contour(isocortex_map)
+#plt.imshow(isocortex_map,vmax=1300, cmap='gray', alpha=0.5)
+#plt.imshow(contour, cmap='binary_r')
+#plt.show()
+
+#mask_list = []
+#for i in id_name_dict:
+#    mask_list.append(i)
+
+#newmask = create_mask(isocortex_map, mask_list)
+#plt.imshow(newmask, cmap='binary_r')
+#plt.show()
+
