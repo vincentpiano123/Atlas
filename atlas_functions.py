@@ -1,12 +1,16 @@
 import numpy as np
 import os
-import functools
+import nrrd
+#import functools
 import time
+#from numba import njit #To use njit, write @njit before the function
 import matplotlib.pyplot as plt
-from numba import njit
+import tkinter as tk
+import tkinter.filedialog as filedialog
 from tqdm import tqdm
-from allensdk.core.reference_space import ReferenceSpace
+#from allensdk.core.reference_space import ReferenceSpace
 from allensdk.core.reference_space_cache import ReferenceSpaceCache
+
 
 def open_AllenSDK(reference_space_key='annotation/ccf_2017', resolution=25):
     # Opens every variable necessary for analysis. 
@@ -99,9 +103,66 @@ def create_contour(structure): #Contours in horizontal (h) and vertical (v) plan
     contours = contour_h + contour_v
     return np.where(contours!=0, 1, 0)
 
-                        
-                        
 
+def search_for_file_path():
+    root = tk.Tk()
+    root.withdraw() #use to hide tkinter window
+    currdir = os.getcwd()
+    tempdir = filedialog.askdirectory(parent=root, initialdir=currdir, title='Please select a directory')
+    if len(tempdir) > 0:
+        print ("You chose: %s" % tempdir)
+    root.destroy()
+    time.sleep(0.1)
+    return tempdir
+
+
+# Antoine Légaré's funtion.
+def identify_files(path, keywords):
+    items = os.listdir(path)
+    files = []
+    for item in items:
+        if all(keyword in item for keyword in keywords):
+            files.append(item)
+    return files
+
+
+
+#Unfinished function.
+def save_mask(mask, folderName, name):
+    # Saves a mask as a numpy array in the chosen directory, or creates a new directory if it doesn't exist.
+
+    # Changes mask type to uint8
+    if mask.dtype != np.dtype('uint8'):
+        mask = mask.astype(np.uint8)
+
+    # Creates directory:
+    if not os.path.exists(folderName):
+        try:
+            os.mkdir(folderName)
+        except OSError:
+            print ("Folder %s already exists. Adding .np and .nrrd files in %s." % folderName)
+
+    
+    path = search_for_file_path()
+    np.save(path + '/' + folderName + '/' + name + '.np', mask)
+    nrrd.write(path + '/' + folderName + '/' + name + '.nrrd', mask)
+    return
+
+
+# Some sample numpy data
+# data = np.zeros((5,4,3,2))
+# filename = 'testdata.nrrd'
+
+# Write to a NRRD file
+# nrrd.write(filename, data)
+
+# Read the data back from file
+# readdata, header = nrrd.read(filename)
+# print(readdata.shape)
+# print(header)
+
+#file_path_variable = search_for_file_path()
+#print ("\nfile_path_variable = ", file_path_variable)
 
 #rsp, tree = open_AllenSDK()
 #isocortex_map, id_name_dict, bregma = map_generator(rsp, tree, structure='Isocortex')
