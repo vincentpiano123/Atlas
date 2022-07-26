@@ -10,6 +10,14 @@ import tkinter.filedialog as filedialog
 from tqdm import tqdm
 #from allensdk.core.reference_space import ReferenceSpace
 from allensdk.core.reference_space_cache import ReferenceSpaceCache
+from PIL import Image
+from pathlib import Path
+import ants
+import nrrd
+import cv2
+from EasyROI import EasyROI
+from plantcv import plantcv as pcv
+
 
 
 def open_AllenSDK(reference_space_key='annotation/ccf_2017', resolution=25):
@@ -107,16 +115,15 @@ def create_contour(structure): #Contours in horizontal (h) and vertical (v) plan
 def search_for_file_path():
     root = tk.Tk()
     root.withdraw() #use to hide tkinter window
+    root.update()
     currdir = os.getcwd()
     tempdir = filedialog.askdirectory(parent=root, initialdir=currdir, title='Please select a directory')
     if len(tempdir) > 0:
         print ("You chose: %s" % tempdir)
     root.destroy()
-    time.sleep(0.1)
     return tempdir
 
 
-# Antoine Légaré's funtion.
 def identify_files(path, keywords):
     items = os.listdir(path)
     files = []
@@ -125,6 +132,24 @@ def identify_files(path, keywords):
             files.append(item)
     return files
 
+
+def npy_to_tif(data, name, path = 'search'):
+    if path == 'search':
+        path = search_for_file_path()
+    else:
+        pass
+    data = data.astype('uint8')
+    print(data.dtype)
+    im = Image.fromarray(data)
+    im.save(os.path.join(path, name + ".tif"))
+    return
+
+
+def tif_to_nrrd(filename, path):
+    img = cv2.imread(path + "/" + filename, cv2.IMREAD_GRAYSCALE)
+    filename = Path(filename).stem
+    nrrd.write(path + "/" + filename + '.nrrd', img)
+    return filename + '.nrrd'
 
 
 #Unfinished function.
@@ -137,10 +162,9 @@ def save_mask(mask, folderName, name):
 
     # Creates directory:
     if not os.path.exists(folderName):
-        try:
-            os.mkdir(folderName)
-        except OSError:
-            print ("Folder %s already exists. Adding .np and .nrrd files in %s." % folderName)
+        os.mkdir(folderName)
+    else:
+        print('Directory already exists.')
 
     
     path = search_for_file_path()
@@ -180,4 +204,3 @@ def save_mask(mask, folderName, name):
 #newmask = create_mask(isocortex_map, mask_list)
 #plt.imshow(newmask, cmap='binary_r')
 #plt.show()
-
