@@ -20,7 +20,7 @@ from plantcv import plantcv as pcv
 
 
 
-def open_AllenSDK(reference_space_key='annotation/ccf_2017', resolution=25):
+def open_AllenSDK(reference_space_key='annotation/ccf_2017'):
     # Opens every variable necessary for analysis. 
     # __reference_space_key: key name reference to open a certain annotation (see documentation at allensdk Downloading an annotation volume for other annotations)
     # __resolution: resolution of slices in microns (default is 25)
@@ -30,8 +30,8 @@ def open_AllenSDK(reference_space_key='annotation/ccf_2017', resolution=25):
     # rsp: gets reference space
     # name_map: dictionary of Names to IDs
 
+    resolution=25
     reference_space_key = 'annotation/ccf_2017'
-    resolution = 25 
     rspc = ReferenceSpaceCache(resolution, reference_space_key, manifest='manifest.json')
     tree = rspc.get_structure_tree(structure_graph_id=1) 
     annotation, meta = rspc.get_annotation_volume()
@@ -43,17 +43,31 @@ def open_AllenSDK(reference_space_key='annotation/ccf_2017', resolution=25):
 
 
 
-def map_generator(rsp, tree, show = 'no', structure = 'all'):
+def map_generator(rsp, tree, show = False, structure = 'all', depth='all'):
     # Creates a vertical projection of superficial IDs in structure ID map (from top to bottom)
     # __rsp: reference space from which the atlas data is taken (like Id maps and names and stuff)
     # __show: if it equals 'yes', it plots the ID_map (WARNING: some IDs are so high they overshadow every other)
     # __structure: if it equals 'all', every region is kept in id_map. Else, structure takes as value a string of the region name to keep and removes every 
     #              subregion not contained in structure. structure can be 'Cerebellum', 'Isocortex', 'Olfactory areas', and much more (see 3D viewer brain map).
+    # __depth: 'all' if all brain is scanned. depth = how many millimeter deep in the brain if you want to stop scan at a certain depth in the brain.
 
     
     y_dim = rsp.annotation.transpose([0,2,1]).shape[0]
     x_dim = rsp.annotation.transpose([0,2,1]).shape[1]
-    z_dim = rsp.annotation.transpose([0,2,1]).shape[2]
+    
+    if depth == 'all':
+        z_dim = rsp.annotation.transpose([0,2,1]).shape[2]
+        
+    elif isinstance(depth, (int, float)):
+        z_dim = int(7 + (depth*40))
+        
+    else:
+        raise TypeError('Oopsi, depth variable is either "all" or an int corresponding to how deep in the brain you need the scan to be (in mm)')
+        
+        
+        
+        z_dim = rsp.annotation.transpose
+            
     id_map = np.zeros((y_dim,x_dim)) 
 
     for slice in tqdm(range(z_dim)):
@@ -84,7 +98,7 @@ def map_generator(rsp, tree, show = 'no', structure = 'all'):
         id_name_dict[i] = name_map[i]
 
 
-    if show == 'yes':    
+    if show:    
         fig, ax = plt.subplots(figsize=(10, 10))
         plt.imshow(id_map, interpolation = 'none',vmax=1300)
         plt.show()
@@ -112,16 +126,32 @@ def create_contour(structure): #Contours in horizontal (h) and vertical (v) plan
     return np.where(contours!=0, 1, 0)
 
 
-def search_for_file_path():
-    root = tk.Tk()
-    root.withdraw() #use to hide tkinter window
-    root.update()
-    currdir = os.getcwd()
-    tempdir = filedialog.askdirectory(parent=root, initialdir=currdir, title='Please select a directory')
-    if len(tempdir) > 0:
-        print ("You chose: %s" % tempdir)
-    root.destroy()
-    return tempdir
+#def search_for_file_path():
+#    root = tk.Tk()
+#    root.withdraw() #use to hide tkinter window
+#    root.update()
+#    currdir = os.getcwd()
+#    tempdir = filedialog.askdirectory(parent=root, initialdir=currdir, title='Please select a directory')
+#    if len(tempdir) > 0:
+#        print ("You chose: %s" % tempdir)
+#    root.destroy()
+#    return tempdir
+
+
+def search_path(path_type='folder'):
+    from PyQt5.QtWidgets import QFileDialog, QApplication
+    from pathlib import Path
+    
+    if path_type == 'folder':
+        app = QApplication([])
+        folder_selected = QFileDialog.getExistingDirectory()
+        print ("You chose: %s" % folder_selected)
+        return folder_selected
+    if path_type == 'file':
+        app = QApplication([])
+        file_selected = QFileDialog.getOpenFileName()[0]
+        print("You chose: %s" % file_selected)
+        return file_selected
 
 
 def identify_files(path, keywords):
