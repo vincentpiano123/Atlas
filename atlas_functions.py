@@ -18,8 +18,6 @@ import cv2
 from EasyROI import EasyROI
 from plantcv import plantcv as pcv
 
-
-
 def open_AllenSDK(reference_space_key='annotation/ccf_2017'):
     # Opens every variable necessary for analysis. 
     # __reference_space_key: key name reference to open a certain annotation (see documentation at allensdk Downloading an annotation volume for other annotations)
@@ -138,19 +136,22 @@ def create_contour(structure): #Contours in horizontal (h) and vertical (v) plan
 #    return tempdir
 
 
-def search_path(path_type='folder'):
+def search_path(path_type='folder', step_name = ""):
     from PyQt5.QtWidgets import QFileDialog, QApplication
     from pathlib import Path
-    
+
+    app = QApplication([])
+
     if path_type == 'folder':
-        app = QApplication([])
         folder_selected = QFileDialog.getExistingDirectory()
         print ("You chose: %s" % folder_selected)
+        app.quit()
         return folder_selected
+
     if path_type == 'file':
-        app = QApplication([])
         file_selected = QFileDialog.getOpenFileName()[0]
         print("You chose: %s" % file_selected)
+        app.quit()
         return file_selected
 
 
@@ -165,42 +166,82 @@ def identify_files(path, keywords):
 
 def npy_to_tif(data, name, path = 'search'):
     if path == 'search':
-        path = search_for_file_path()
+        path = search_path()
     else:
         pass
     data = data.astype('uint8')
-    print(data.dtype)
     im = Image.fromarray(data)
     im.save(os.path.join(path, name + ".tif"))
     return
 
 
 def tif_to_nrrd(filename, path):
-    img = cv2.imread(path + "/" + filename, cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread(path + "/" + filename , cv2.IMREAD_GRAYSCALE)
     filename = Path(filename).stem
     nrrd.write(path + "/" + filename + '.nrrd', img)
     return filename + '.nrrd'
 
 
+def select_mask(image):
+    print(
+        'Press "escape" to exit when cropping is done. First and last selected coordinates will automatically connect.')
+    # Initialize variables
+    roi_points = []
+    roi_completed = False
+
+    def mouse_callback(event, x, y, flags, param):
+        nonlocal roi_points, roi_completed
+
+        if event == cv2.EVENT_LBUTTONDOWN:
+            roi_points.append((x, y))
+            cv2.circle(image, (x, y), 4, (0, 0, 0), -1)
+
+            if len(roi_points) > 1:
+                cv2.line(image, roi_points[-2], roi_points[-1], (0, 0, 0), 5)
+
+    # Create a window to display the image
+    cv2.namedWindow('Select ROI')
+    cv2.imshow('Select ROI', image)
+
+    # Register the mouse callback function
+    cv2.setMouseCallback('Select ROI', mouse_callback)
+    while not roi_completed:
+        cv2.imshow('Select ROI', image)
+        key = cv2.waitKey(10)
+
+        if key == 27:
+            roi_completed = True
+
+    # Convert the ROI points to a NumPy array
+    roi_points = np.array(roi_points)
+
+    # Create a binary mask
+    mask = np.zeros_like(image[:, :, 0], dtype=np.uint8)
+    cv2.fillPoly(mask, [roi_points], 1)
+
+    cv2.destroyWindow('Select ROI')
+    cv2.destroyAllWindows()
+    return mask
+
 #Unfinished function.
-def save_mask(mask, folderName, name):
-    # Saves a mask as a numpy array in the chosen directory, or creates a new directory if it doesn't exist.
-
-    # Changes mask type to uint8
-    if mask.dtype != np.dtype('uint8'):
-        mask = mask.astype(np.uint8)
-
-    # Creates directory:
-    if not os.path.exists(folderName):
-        os.mkdir(folderName)
-    else:
-        print('Directory already exists.')
+#def save_mask(mask, folderName, name):
+#    # Saves a mask as a numpy array in the chosen directory, or creates a new directory if it doesn't exist.
+#
+#    # Changes mask type to uint8
+#    if mask.dtype != np.dtype('uint8'):
+#        mask = mask.astype(np.uint8)
+#
+#    # Creates directory:
+#    if not os.path.exists(folderName):
+#        os.mkdir(folderName)
+#    else:
+#        print('Directory already exists.')
 
     
-    path = search_for_file_path()
-    np.save(path + '/' + folderName + '/' + name + '.np', mask)
-    nrrd.write(path + '/' + folderName + '/' + name + '.nrrd', mask)
-    return
+#   path = search_for_file_path()
+#    np.save(path + '/' + folderName + '/' + name + '.np', mask)
+#    nrrd.write(path + '/' + folderName + '/' + name + '.nrrd', mask)
+#    return
 
 
 # Some sample numpy data
@@ -234,3 +275,4 @@ def save_mask(mask, folderName, name):
 #newmask = create_mask(isocortex_map, mask_list)
 #plt.imshow(newmask, cmap='binary_r')
 #plt.show()
+
