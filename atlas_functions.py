@@ -62,9 +62,7 @@ def map_generator(rsp, tree, show = False, structure = 'all', depth='all'):
     else:
         raise TypeError('Oopsi, depth variable is either "all" or an int corresponding to how deep in the brain you need the scan to be (in mm)')
         
-        
-        
-        z_dim = rsp.annotation.transpose
+
             
     id_map = np.zeros((y_dim,x_dim)) 
 
@@ -136,22 +134,27 @@ def create_contour(structure): #Contours in horizontal (h) and vertical (v) plan
 #    return tempdir
 
 
-def search_path(path_type='folder', step_name = ""):
+def search_path(path_type='folder'):
     from PyQt5.QtWidgets import QFileDialog, QApplication
-    from pathlib import Path
 
-    app = QApplication([])
+    app_test = QApplication.instance()
+    if app_test is None:
+        app = QApplication([])
+    else:
+        print("app exists bro")
 
     if path_type == 'folder':
         folder_selected = QFileDialog.getExistingDirectory()
         print ("You chose: %s" % folder_selected)
         app.quit()
+        del app
         return folder_selected
 
     if path_type == 'file':
         file_selected = QFileDialog.getOpenFileName()[0]
         print("You chose: %s" % file_selected)
         app.quit()
+        del app
         return file_selected
 
 
