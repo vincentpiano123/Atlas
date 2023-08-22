@@ -12,11 +12,9 @@ from tqdm import tqdm
 from allensdk.core.reference_space_cache import ReferenceSpaceCache
 from PIL import Image
 from pathlib import Path
-import ants
+import antss
 import nrrd
 import cv2
-from EasyROI import EasyROI
-from plantcv import plantcv as pcv
 
 def open_AllenSDK(reference_space_key='annotation/ccf_2017'):
     # Opens every variable necessary for analysis. 
@@ -108,18 +106,18 @@ def create_mask(id_map, i):
     if type(i) == list:
         mask = np.zeros(id_map.shape)
         for j in i:
-            mask += np.where(id_map==j, 1, 0)
+            mask += np.where(id_map == j, 1, 0)
         return mask
-    return np.where(id_map==i, 1, 0)
+    return np.where(id_map == i, 1, 0).astype(np.uint8)
 
 
-def create_contour(structure): #Contours in horizontal (h) and vertical (v) planes. contours are sum of both, and returns boolean (normalized to 1).
+def create_contour(structure, uint8 = True): #Contours in horizontal (h) and vertical (v) planes. contours are sum of both, and returns boolean (normalized to 1).
     contours_h = abs(np.diff(structure))
     contours_v = abs(np.diff(structure, axis=0))
     contour_h = np.concatenate((contours_h, np.zeros((len(contours_h),1))),axis=1)
     contour_v = np.concatenate((contours_v, np.zeros((1,len(contours_v[0])))))
     contours = contour_h + contour_v
-    return np.where(contours!=0, 1, 0)
+    return np.where(contours!=0, 1, 0).astype(np.uint8)
 
 
 #def search_for_file_path():
